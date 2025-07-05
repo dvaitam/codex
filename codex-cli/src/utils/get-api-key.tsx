@@ -2,6 +2,7 @@ import type { Choice } from "./get-api-key-components";
 import type { Request, Response } from "express";
 
 import { ApiKeyPrompt, WaitingForAuth } from "./get-api-key-components";
+import { log } from "./logger/log.js";
 import chalk from "chalk";
 import express from "express";
 import fs from "fs/promises";
@@ -221,11 +222,22 @@ async function maybeRedeemCredits(
         ? "https://api.openai.com"
         : "https://api.openai.org";
 
-    const redeemRes = await fetch(`${apiHost}/v1/billing/redeem_credits`, {
+    const redeemUrl = `${apiHost}/v1/billing/redeem_credits`;
+    const redeemRes = await fetch(redeemUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id_token: currentIdToken }),
     });
+
+    // Log request ID for troubleshooting
+    const requestId =
+      redeemRes.headers.get("x-request-id") ||
+      redeemRes.headers.get("openai-request-id");
+    if (requestId) {
+      log(`Redeem credits request to ${redeemUrl} (id: ${requestId})`);
+    } else {
+      log(`Redeem credits request to ${redeemUrl} (no request id returned)`);
+    }
 
     if (!redeemRes.ok) {
       // eslint-disable-next-line no-console
